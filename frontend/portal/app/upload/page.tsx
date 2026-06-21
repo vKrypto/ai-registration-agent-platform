@@ -1,16 +1,18 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 const DOCUMENT_TYPES = ["PAN", "AADHAAR", "BANK_LETTER"];
 
 export default function UploadPage() {
-  const searchParams = useSearchParams();
-  const initialApplicationId = searchParams.get("applicationId") ?? "";
-  const [applicationId, setApplicationId] = useState(initialApplicationId);
+  const [applicationId, setApplicationId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setApplicationId(params.get("applicationId") ?? "");
+  }, []);
 
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
