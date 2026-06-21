@@ -60,6 +60,32 @@ resource "azurerm_key_vault" "main" {
   tags = var.tags
 }
 
+resource "azurerm_cognitive_account" "openai" {
+  name                = "oai-${local.name_prefix}-${random_string.suffix.result}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  kind                = "OpenAI"
+  sku_name            = "S0"
+
+  tags = var.tags
+}
+
+resource "azurerm_cognitive_deployment" "chat" {
+  name                 = "chat-${var.openai_model_name}"
+  cognitive_account_id = azurerm_cognitive_account.openai.id
+
+  model {
+    format  = "OpenAI"
+    name    = var.openai_model_name
+    version = var.openai_model_version
+  }
+
+  sku {
+    name     = "Standard"
+    capacity = var.openai_deployment_capacity
+  }
+}
+
 resource "azurerm_cosmosdb_account" "main" {
   name                = "cosmos-${local.name_prefix}-${random_string.suffix.result}"
   location            = azurerm_resource_group.main.location
