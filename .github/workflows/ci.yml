@@ -53,6 +53,29 @@ jobs:
           PYTHONPATH: .
         run: pytest
 
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        working-directory: frontend/portal
+        run: npm install
+
+      - name: Build frontend
+        working-directory: frontend/portal
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        run: npm run build
+
   terraform-validate:
     name: Terraform Validate
     runs-on: ubuntu-latest
