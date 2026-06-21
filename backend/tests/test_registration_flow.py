@@ -48,6 +48,12 @@ def test_complete_registration_flow_auto_approves():
     assert body["decision"] == "APPROVED"
     assert body["risk_score"] == 20
 
+    details_response = client.get(f"/api/v1/applications/{application_id}")
+    actions = [event["action"] for event in details_response.json()["audit_events"]]
+    assert "CREATE_APPLICATION" in actions
+    assert "UPLOAD_DOCUMENT" in actions
+    assert "PROCESS_APPLICATION" in actions
+
 
 def test_incomplete_registration_goes_to_manual_review():
     application_id = create_application()
@@ -79,3 +85,7 @@ def test_reviewer_can_request_more_information():
 
     assert response.status_code == 200
     assert response.json()["status"] == "MORE_INFO_REQUIRED"
+
+    details_response = client.get(f"/api/v1/reviewer/applications/{application_id}")
+    actions = [event["action"] for event in details_response.json()["audit_events"]]
+    assert "REQUEST_MORE_INFORMATION" in actions
