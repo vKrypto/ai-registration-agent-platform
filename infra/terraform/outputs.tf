@@ -18,6 +18,21 @@ output "key_vault_name" {
   value       = azurerm_key_vault.main.name
 }
 
+output "azure_openai_account_name" {
+  description = "Azure OpenAI account name."
+  value       = azurerm_cognitive_account.openai.name
+}
+
+output "azure_openai_endpoint" {
+  description = "Azure OpenAI endpoint."
+  value       = azurerm_cognitive_account.openai.endpoint
+}
+
+output "azure_openai_chat_deployment_name" {
+  description = "Default Azure OpenAI chat deployment name."
+  value       = azurerm_cognitive_deployment.chat.name
+}
+
 output "cosmosdb_account_name" {
   description = "Cosmos DB account name."
   value       = azurerm_cosmosdb_account.main.name
