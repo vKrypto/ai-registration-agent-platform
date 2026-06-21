@@ -13,6 +13,14 @@ class ApplicationStatus(str, Enum):
     REJECTED = "REJECTED"
 
 
+class DocumentType(str, Enum):
+    PAN = "PAN"
+    AADHAAR = "AADHAAR"
+    BANK_LETTER = "BANK_LETTER"
+    PASSPORT = "PASSPORT"
+    OTHER = "OTHER"
+
+
 class CreateApplicationRequest(BaseModel):
     registration_type: str
     full_name: str
@@ -31,6 +39,27 @@ class StatusResponse(BaseModel):
     status: ApplicationStatus
     message: str
     next_action_required: bool
+
+
+class UploadDocumentResponse(BaseModel):
+    document_id: str
+    application_id: str
+    document_type: DocumentType
+    file_name: str
+    upload_status: str
+
+
+class ProcessApplicationResponse(BaseModel):
+    application_id: str
+    status: ApplicationStatus
+    risk_score: int
+    decision: str
+    validation_results: list[dict]
+
+
+class ReviewDecisionRequest(BaseModel):
+    comment: str | None = None
+    reason: str | None = None
 
 
 class AgentChatRequest(BaseModel):
