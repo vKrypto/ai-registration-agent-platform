@@ -1,0 +1,9 @@
+project_name = "ai-registration-agent"
+environment  = "dev"
+location     = "eastus"
+
+tags = {
+  project     = "ai-registration-agent-platform"
+  environment = "dev"
+  owner       = "platform-team"
+}
