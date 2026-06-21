@@ -1,3 +1,5 @@
+data "azurerm_client_config" "current" {}
+
 resource "random_string" "suffix" {
   length  = 6
   upper   = false
@@ -16,14 +18,25 @@ resource "azurerm_resource_group" "main" {
 }
 
 resource "azurerm_storage_account" "documents" {
-  name                     = substr("st${local.compact}", 0, 24)
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-
+  name                            = substr("st${local.compact}", 0, 24)
+  resource_group_name             = azurerm_resource_group.main.name
+  location                        = azurerm_resource_group.main.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
   allow_nested_items_to_be_public = false
   min_tls_version                 = "TLS1_2"
+
+  blob_properties {
+    versioning_enabled = true
+
+    delete_retention_policy {
+      days = 7
+    }
+
+    container_delete_retention_policy {
+      days = 7
+    }
+  }
 
   tags = var.tags
 }
@@ -42,11 +55,10 @@ resource "azurerm_key_vault" "main" {
   sku_name                   = "standard"
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
+  enable_rbac_authorization  = true
 
   tags = var.tags
 }
-
-data "azurerm_client_config" "current" {}
 
 resource "azurerm_cosmosdb_account" "main" {
   name                = "cosmos-${local.name_prefix}-${random_string.suffix.result}"
@@ -71,4 +83,31 @@ resource "azurerm_cosmosdb_sql_database" "main" {
   name                = "registration"
   resource_group_name = azurerm_resource_group.main.name
   account_name        = azurerm_cosmosdb_account.main.name
+}
+
+resource "azurerm_cosmosdb_sql_container" "applications" {
+  name                  = "applications"
+  resource_group_name   = azurerm_resource_group.main.name
+  account_name          = azurerm_cosmosdb_account.main.name
+  database_name         = azurerm_cosmosdb_sql_database.main.name
+  partition_key_paths   = ["/application_id"]
+  partition_key_version = 2
+}
+
+resource "azurerm_cosmosdb_sql_container" "audit_events" {
+  name                  = "audit_events"
+  resource_group_name   = azurerm_resource_group.main.name
+  account_name          = azurerm_cosmosdb_account.main.name
+  database_name         = azurerm_cosmosdb_sql_database.main.name
+  partition_key_paths   = ["/application_id"]
+  partition_key_version = 2
+}
+
+resource "azurerm_cosmosdb_sql_container" "conversations" {
+  name                  = "conversations"
+  resource_group_name   = azurerm_resource_group.main.name
+  account_name          = azurerm_cosmosdb_account.main.name
+  database_name         = azurerm_cosmosdb_sql_database.main.name
+  partition_key_paths   = ["/application_id"]
+  partition_key_version = 2
 }
