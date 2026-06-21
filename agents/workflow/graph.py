@@ -10,6 +10,12 @@ from workflow.nodes import (
 from workflow.state import RegistrationWorkflowState
 
 
+def route_after_document_collection(state: RegistrationWorkflowState) -> str:
+    if state.get("status") == "MORE_INFO_REQUIRED":
+        return "stop"
+    return "continue"
+
+
 def build_registration_workflow():
     graph = StateGraph(RegistrationWorkflowState)
 
@@ -20,7 +26,14 @@ def build_registration_workflow():
     graph.add_node("decide", decide)
 
     graph.set_entry_point("collect_documents")
-    graph.add_edge("collect_documents", "extract_fields")
+    graph.add_conditional_edges(
+        "collect_documents",
+        route_after_document_collection,
+        {
+            "stop": END,
+            "continue": "extract_fields",
+        },
+    )
     graph.add_edge("extract_fields", "validate_documents")
     graph.add_edge("validate_documents", "calculate_risk")
     graph.add_edge("calculate_risk", "decide")
