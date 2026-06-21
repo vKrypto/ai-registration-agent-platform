@@ -11,6 +11,7 @@ from app.schemas import (
     StatusResponse,
     UploadDocumentResponse,
 )
+from app.services.audit import get_audit_events, record_audit_event
 from app.services.processing import calculate_risk, decide_status, extract_fields, validate_documents
 
 router = APIRouter()
@@ -40,6 +41,13 @@ def create_application(payload: CreateApplicationRequest) -> ApplicationResponse
         "validation_results": [],
     }
     DOCUMENTS[application_id] = []
+    record_audit_event(
+        application_id=application_id,
+        actor_type="USER",
+        action="CREATE_APPLICATION",
+        new_state=ApplicationStatus.DRAFT.value,
+        payload={"registration_type": payload.registration_type},
+    )
 
     return ApplicationResponse(
         application_id=application_id,
@@ -57,6 +65,7 @@ def get_application(application_id: str) -> dict:
     return {
         **application,
         "documents": DOCUMENTS.get(application_id, []),
+        "audit_events": get_audit_events(application_id),
     }
 
 
@@ -113,6 +122,7 @@ async def upload_document(
     if len(content) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(status_code=400, detail="File size exceeds 10 MB limit")
 
+    previous_state = APPLICATIONS[application_id]["status"].value
     document_id = f"doc_{uuid4().hex[:12]}"
     document = {
         "document_id": document_id,
@@ -127,6 +137,14 @@ async def upload_document(
 
     DOCUMENTS.setdefault(application_id, []).append(document)
     APPLICATIONS[application_id]["status"] = ApplicationStatus.DOCUMENTS_UPLOADED
+    record_audit_event(
+        application_id=application_id,
+        actor_type="USER",
+        action="UPLOAD_DOCUMENT",
+        previous_state=previous_state,
+        new_state=ApplicationStatus.DOCUMENTS_UPLOADED.value,
+        payload={"document_id": document_id, "document_type": document_type.value},
+    )
 
     return UploadDocumentResponse(
         document_id=document_id,
@@ -143,6 +161,7 @@ def process_application(application_id: str) -> ProcessApplicationResponse:
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
 
+    previous_state = application["status"].value
     documents = DOCUMENTS.get(application_id, [])
     extracted = extract_fields(documents)
     validation_results = validate_documents(REQUIRED_DOCUMENTS, documents, extracted)
@@ -154,6 +173,14 @@ def process_application(application_id: str) -> ProcessApplicationResponse:
     application["decision"] = decision
     application["validation_results"] = validation_results
     application["extracted_fields"] = extracted
+    record_audit_event(
+        application_id=application_id,
+        actor_type="SERVICE",
+        action="PROCESS_APPLICATION",
+        previous_state=previous_state,
+        new_state=status.value,
+        payload={"risk_score": risk_score, "decision": decision},
+    )
 
     return ProcessApplicationResponse(
         application_id=application_id,
